@@ -2,57 +2,30 @@
 # coding=utf-8
 
 import logging
-import copy
-import math
 import os
 import sys
 import json
-from dataclasses import dataclass, field
-from itertools import chain
-from typing import Optional
 import numpy as np
 
 import datasets
-import evaluate
 import torch
 from datasets import load_dataset
 
 import transformers
 from transformers import (
-    CONFIG_MAPPING,
-    MODEL_FOR_CAUSAL_LM_MAPPING,
-    AutoConfig,
-    AutoModelForCausalLM,
-    AutoTokenizer,
     HfArgumentParser,
-    Trainer,
-    TrainingArguments,
     Seq2SeqTrainingArguments,
     default_data_collator,
-    is_torch_tpu_available,
     set_seed,
-    LlamaTokenizer,
 )
-from transformers.testing_utils import CaptureLogger
-from transformers.trainer_utils import get_last_checkpoint
-from transformers.utils import check_min_version, send_example_telemetry
-from transformers.utils.versions import require_version
-from peft import LoraConfig, get_peft_model, prepare_model_for_int8_training, TaskType
-from peft import PeftModel, PeftConfig
-from collections import defaultdict
-from transformers.trainer_callback import TrainerCallback
-from datasets import concatenate_datasets, interleave_datasets
+
+from datasets import interleave_datasets
 from utils.trainer_llmmt import LlmmtTrainer
-from utils.utils import LANG_TABLE, load_mmt_dataset, get_preprocessed_data, clean_outputstring, load_tokenizer, load_model, SavePeftModelCallback, get_key_suffix
+from utils.utils import load_mmt_dataset, get_preprocessed_data, clean_outputstring, load_tokenizer, load_model, SavePeftModelCallback, get_key_suffix
 from utils.arguments import ModelArguments, DataTrainingArguments
 from utils.ul2collator import DataCollatorForUL2
 
 logger = logging.getLogger(__name__)
-
-from peft import get_peft_config, get_peft_model, LoraConfig, TaskType
-
-from transformers.trainer_utils import PREFIX_CHECKPOINT_DIR
-
 
 def main():
     # See all possible arguments in src/transformers/training_args.py
@@ -66,10 +39,6 @@ def main():
         model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
     else:
         model_args, data_args, training_args = parser.parse_args_into_dataclasses()
-
-    # Sending telemetry. Tracking the example usage helps us better allocate resources to maintain them. The
-    # information sent is the one passed as arguments along with your Python/PyTorch versions.
-    send_example_telemetry("run_llmmt", model_args, data_args)
 
     # Setup logging
     logging.basicConfig(
@@ -146,7 +115,6 @@ def main():
                 shots_eval_dict[lg_pair] = json.load(f)
 
     train_datasets, eval_datasets, test_datasets = get_preprocessed_data(train_raw_data, valid_raw_data, test_raw_data, pairs, tokenizer, shots_eval_dict, data_args, training_args, model_args)
-    metric = evaluate.load("sacrebleu")
 
     # Load model
     model = load_model(data_args, model_args, training_args, tokenizer, logger)
@@ -213,10 +181,6 @@ def main():
                     for pred in decoded_preds:
                         pred = clean_outputstring(pred, suffix, logger, split_idx)
                         f.writelines([pred, "\n"])
-
-def _mp_fn(index):
-    # For xla_spawn (TPUs)
-    main()
 
 
 if __name__ == "__main__":
