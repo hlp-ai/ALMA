@@ -1,10 +1,13 @@
 from dataclasses import dataclass, field
 from typing import Optional
+
 from transformers import MODEL_FOR_CAUSAL_LM_MAPPING
 from transformers.utils.versions import require_version
 
 MODEL_CONFIG_CLASSES = list(MODEL_FOR_CAUSAL_LM_MAPPING.keys())
 MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
+
+
 @dataclass
 class ModelArguments:
     """
@@ -116,6 +119,7 @@ class ModelArguments:
             )
         },
     )
+
     def __post_init__(self):
         if self.config_overrides is not None and (self.config_name is not None or self.model_name_or_path is not None):
             raise ValueError(
