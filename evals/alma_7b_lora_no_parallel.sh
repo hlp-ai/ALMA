@@ -25,7 +25,8 @@ python \
     --overwrite_cache \
     --overwrite_output_dir \
     --multi_gpu_one_model \
-    --max_test_samples 50
+    --max_test_samples 50 \
+    --torch_dtype float16
 
 ## Evaluation (BLEU, COMET)
 bash ./evals/eval_generation.sh ${OUTPUT_DIR} ${TEST_PAIRS}

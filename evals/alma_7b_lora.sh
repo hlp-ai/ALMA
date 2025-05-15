@@ -23,7 +23,8 @@ accelerate launch --main_process_port ${port} --config_file configs/deepspeed_ev
     --seed 42 \
     --num_beams 5 \
     --overwrite_cache \
-    --overwrite_output_dir 
+    --overwrite_output_dir \
+    --torch_dtype float16
 
 if [[ ${TEST_PAIRS} == *zh-en* ]]; then
 accelerate launch --main_process_port ${port} --config_file configs/deepspeed_eval_config.yaml \

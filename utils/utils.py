@@ -296,16 +296,17 @@ def load_model(data_args, model_args, training_args, tokenizer, logger):
 
     ## Model Loading
     if model_args.model_name_or_path:
-        torch_dtype = (
-            model_args.torch_dtype
-            if model_args.torch_dtype in ["auto", None]
-            else getattr(torch, model_args.torch_dtype)
-        )
+        # torch_dtype = (
+        #     model_args.torch_dtype
+        #     if model_args.torch_dtype in ["auto", None]
+        #     else getattr(torch, model_args.torch_dtype)
+        # )
+        torch_dtype = model_args.torch_dtype
         if model_args.multi_gpu_one_model and not training_args.do_train:
             model = AutoModelForCausalLM.from_pretrained(
                 model_args.model_name_or_path if last_checkpoint is None else last_checkpoint,
                 device_map="auto",
-                torch_dtype=torch.float16,
+                torch_dtype=torch_dtype,
                 low_cpu_mem_usage=model_args.low_cpu_mem_usage,
             )
         else:
