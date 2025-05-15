@@ -110,7 +110,7 @@ def load_mmt_dataset(pairs, data_args, model_args, training_args, logger):
                 "json",
                 data_files={"train": train_file},
                 cache_dir=model_args.cache_dir,
-                use_auth_token=True if model_args.use_auth_token else None,
+                # use_auth_token=True if model_args.use_auth_token else None,
                 streaming=data_args.streaming,
             )
         if not os.path.isfile(valid_file):
@@ -120,7 +120,7 @@ def load_mmt_dataset(pairs, data_args, model_args, training_args, logger):
                 "json",
                 data_files={"validation": valid_file},
                 cache_dir=model_args.cache_dir,
-                use_auth_token=True if model_args.use_auth_token else None,
+                # use_auth_token=True if model_args.use_auth_token else None,
             )
         if not os.path.isfile(test_file):
             logger.info(f"Warning: test file {test_file} does not exist!")
@@ -129,7 +129,7 @@ def load_mmt_dataset(pairs, data_args, model_args, training_args, logger):
                 "json",
                 data_files={"test": test_file},
                 cache_dir=model_args.cache_dir,
-                use_auth_token=True if model_args.use_auth_token else None,
+                # use_auth_token=True if model_args.use_auth_token else None,
             )
             test_raw_data[f"{src_lang}-{tgt_lang}"] = test_raw_data[f"{src_lang}-{tgt_lang}"].rename_column(
                 "translation", f"{src_lang}-{tgt_lang}")
@@ -274,7 +274,7 @@ def load_model(data_args, model_args, training_args, tokenizer, logger):
     config_kwargs = {
         "cache_dir": model_args.cache_dir,
         "revision": model_args.model_revision,
-        "use_auth_token": True if model_args.use_auth_token else None,
+        # "use_auth_token": True if model_args.use_auth_token else None,
         "trust_remote_code": True,
         "max_length": data_args.max_source_length + data_args.max_new_tokens,
         # "norm_type": "low_precision_rmsnorm",
@@ -305,6 +305,7 @@ def load_model(data_args, model_args, training_args, tokenizer, logger):
             model = AutoModelForCausalLM.from_pretrained(
                 model_args.model_name_or_path if last_checkpoint is None else last_checkpoint,
                 device_map="auto",
+                torch_dtype=torch.float16,
                 low_cpu_mem_usage=model_args.low_cpu_mem_usage,
             )
         else:
@@ -314,7 +315,7 @@ def load_model(data_args, model_args, training_args, tokenizer, logger):
                 config=config,
                 cache_dir=model_args.cache_dir,
                 revision=model_args.model_revision,
-                use_auth_token=True if model_args.use_auth_token else None,
+                # use_auth_token=True if model_args.use_auth_token else None,
                 torch_dtype=torch_dtype,
                 low_cpu_mem_usage=model_args.low_cpu_mem_usage,
                 trust_remote_code=True,
@@ -385,7 +386,7 @@ def load_tokenizer(data_args, model_args, training_args, logger):
         "cache_dir": model_args.cache_dir,
         "use_fast": model_args.use_fast_tokenizer,
         "revision": model_args.model_revision,
-        "use_auth_token": True if model_args.use_auth_token else None,
+        # "use_auth_token": True if model_args.use_auth_token else None,
     }
 
     if model_args.tokenizer_name:

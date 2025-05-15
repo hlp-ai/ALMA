@@ -75,7 +75,7 @@ def main():
             "json",
             data_files=data_args.mono_data_path,
             cache_dir=model_args.cache_dir,
-            use_auth_token=True if model_args.use_auth_token else None,
+            # use_auth_token=True if model_args.use_auth_token else None,
             streaming=data_args.streaming,
         )
     if data_args.oscar_data_path:
@@ -93,7 +93,7 @@ def main():
                     data_args.oscar_data_path,
                     lg,
                     cache_dir=model_args.cache_dir,
-                    use_auth_token=True if model_args.use_auth_token else None,
+                    # use_auth_token=True if model_args.use_auth_token else None,
                     streaming=data_args.streaming,
                 )['train']
             )

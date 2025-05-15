@@ -2,8 +2,8 @@ OUTPUT_DIR=${1}
 TEST_PAIRS=${2}
 
 ## Evaluation
-source ~/.bashrc
-conda activate comet
+# source ~/.bashrc
+# conda activate comet
 for pair in ${TEST_PAIRS//,/ }; do
     src=$(echo ${pair} | cut -d "-" -f 1)
     tgt=$(echo ${pair} | cut -d "-" -f 2)
