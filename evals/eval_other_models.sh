@@ -17,7 +17,7 @@ fi
 ## Generation
 accelerate launch --main_process_port ${port} --config_file configs/deepspeed_eval_config.yaml \
     run_llmmt.py \
-    --model_name_or_path ${MODEL} \
+    --model_name_or_path ${MODEL_NAME} \
     --do_predict \
     --low_cpu_mem_usage \
     --language_pairs ${TEST_PAIRS} \
@@ -32,6 +32,8 @@ accelerate launch --main_process_port ${port} --config_file configs/deepspeed_ev
     --num_beams 5 \
     --overwrite_cache \
     --overwrite_output_dir \
+    --torch_dtype float16 \
+    --max_test_samples 50 \
     ${REVISION}
 
 ## Evaluation (BLEU, COMET)
