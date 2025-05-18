@@ -592,7 +592,8 @@ def get_preprocessed_data(train_raw_data, valid_raw_data, test_raw_data, pairs, 
     if data_args.mmt_data_path or data_args.mono_data_path:
         column_names_mmt = ["translation"]
     if data_args.oscar_data_path:
-        column_name_oscar = ["id", "meta", "text"]
+        # column_name_oscar = ["id", "meta", "text"]
+        column_name_oscar = ["id", "text"]
 
     # since this will be pickled to avoid _LazyModule error in Hasher force logger loading before tokenize_function
     tok_logger = transformers.utils.logging.get_logger("transformers.tokenization_utils_base")
