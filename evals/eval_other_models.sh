@@ -22,7 +22,7 @@ accelerate launch --main_process_port ${port} --config_file configs/deepspeed_ev
     --low_cpu_mem_usage \
     --language_pairs ${TEST_PAIRS} \
     --mmt_data_path ./human_written_data/ \
-    --per_device_eval_batch_size 2 \
+    --per_device_eval_batch_size 4 \
     --output_dir ${OUTPUT_DIR} \
     --predict_with_generate \
     --max_new_tokens 256 \
@@ -33,7 +33,6 @@ accelerate launch --main_process_port ${port} --config_file configs/deepspeed_ev
     --overwrite_cache \
     --overwrite_output_dir \
     --torch_dtype float16 \
-    --max_test_samples 50 \
     ${REVISION}
 
 ## Evaluation (BLEU, COMET)
