@@ -23,7 +23,6 @@ from datasets import interleave_datasets
 from utils.trainer_llmmt import LlmmtTrainer
 from utils.utils import load_mmt_dataset, get_preprocessed_data, clean_outputstring, load_tokenizer, load_model, SavePeftModelCallback, get_key_suffix
 from utils.arguments import ModelArguments, DataTrainingArguments
-from utils.ul2collator import DataCollatorForUL2
 
 logger = logging.getLogger(__name__)
 
@@ -102,8 +101,6 @@ def main():
     # load tokenizer
     set_seed(training_args.seed)
     tokenizer = load_tokenizer(data_args, model_args, training_args, logger)
-    if data_args.use_ul2:
-        assert data_args.use_prefix_lm, "Must enable use prefix language model"
 
     shots_eval_dict = {}
     if data_args.few_shot_eval_path:
@@ -118,7 +115,7 @@ def main():
 
     # Load model
     model = load_model(data_args, model_args, training_args, tokenizer, logger)
-    collate_fn = DataCollatorForUL2(model, tokenizer) if data_args.use_ul2 else default_data_collator
+    collate_fn = default_data_collator
     
     # Initialize our Trainer
     trainer = LlmmtTrainer(

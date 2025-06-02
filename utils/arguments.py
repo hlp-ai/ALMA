@@ -209,12 +209,6 @@ class DataTrainingArguments:
             "help": "Whether to ignore the prompt tokens in the loss computation or not."
         },
     )
-    use_ul2: bool = field(
-        default=False,
-        metadata={
-            "help": "Whether to enable mixture of denoisers from UL2 model."
-        },
-    )
     max_source_length: Optional[int] = field(
         default=256,
         metadata={
@@ -254,13 +248,6 @@ class DataTrainingArguments:
         default=False,
         metadata={
             "help": "Use right pad for training, especially for models like MPT."
-        },
-    )
-
-    use_prefix_lm: bool = field(
-        default=False,
-        metadata={
-            "help": "Use prefix language model, especially for models like MPT."
         },
     )
     few_shot_eval_path: str = field(

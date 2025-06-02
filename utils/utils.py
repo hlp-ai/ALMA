@@ -291,8 +291,6 @@ def load_model(data_args, model_args, training_args, tokenizer, logger):
             logger.info(f"Overriding config: {model_args.config_overrides}")
             config.update_from_string(model_args.config_overrides)
             logger.info(f"New config: {config}")
-    if "mpt" in model_args.model_name_or_path:
-        config.attn_config["prefix_lm"] = data_args.use_prefix_lm
 
     ## Model Loading
     if model_args.model_name_or_path:
@@ -481,10 +479,6 @@ def get_preprocessed_data(train_raw_data, valid_raw_data, test_raw_data, pairs, 
         labels = copy.deepcopy(model_inputs)
         # If we are padding here, replace all tokenizer.pad_token_id in the labels by -100 when we want to ignore
         # padding in the loss.
-        if data_args.use_prefix_lm:
-            assert data_args.ignore_prompt_token_for_loss
-            model_inputs["prefix_mask"] = []
-
         if padding == "max_length" and data_args.ignore_pad_token_for_loss:
             labels["input_ids"] = [
                 [(l if l != tokenizer.pad_token_id else -100) for l in label] for label in labels["input_ids"]
@@ -494,19 +488,12 @@ def get_preprocessed_data(train_raw_data, valid_raw_data, test_raw_data, pairs, 
                     prompt = tokenizer(prompt, max_length=data_args.max_source_length,
                                        add_special_tokens=False).input_ids
                     labels["input_ids"][idx][: len(prompt)] = [-100] * len(prompt)
-                    if data_args.use_prefix_lm:
-                        prefix_mask = [0] * len(model_inputs["attention_mask"][idx])
-                        prefix_mask[: len(prompt)] = [1] * len(prompt)
-                        model_inputs["prefix_mask"].append(prefix_mask)
 
         model_inputs["labels"] = labels["input_ids"]
         return model_inputs
 
     def tokenize_function_train_mono(examples):
-        if data_args.use_prefix_lm:
-            inputs = {"input_ids": [], "attention_mask": [], "prefix_mask": []}
-        else:
-            inputs = {"input_ids": [], "attention_mask": []}
+        inputs = {"input_ids": [], "attention_mask": []}
         block_size = data_args.max_source_length + data_args.max_new_tokens
         for ex in examples["translation"]:
             lang1, lang2 = list(ex.keys())
@@ -518,9 +505,7 @@ def get_preprocessed_data(train_raw_data, valid_raw_data, test_raw_data, pairs, 
                 _input = tokenizer(ex[lang], max_length=4096, add_special_tokens=True)
                 _input['input_ids'].append(tokenizer.eos_token_id)
                 _input['attention_mask'].append(1)
-                if data_args.use_prefix_lm:
-                    _input['prefix_mask'] = [0] * len(_input['attention_mask'])
-                    inputs["prefix_mask"].append(_input['prefix_mask'])
+
                 inputs["input_ids"].append(_input['input_ids'])
                 inputs['attention_mask'].append(_input['attention_mask'])
 
@@ -537,18 +522,12 @@ def get_preprocessed_data(train_raw_data, valid_raw_data, test_raw_data, pairs, 
         return model_inputs
 
     def tokenize_function_train_oscar_mono(examples):
-        if data_args.use_prefix_lm:
-            inputs = {"input_ids": [], "attention_mask": [], "prefix_mask": []}
-        else:
-            inputs = {"input_ids": [], "attention_mask": []}
+        inputs = {"input_ids": [], "attention_mask": []}
         block_size = data_args.max_source_length + data_args.max_new_tokens
         for ex in examples["text"]:
             _input = tokenizer(ex, max_length=4096, add_special_tokens=True)
             _input['input_ids'].append(tokenizer.eos_token_id)
             _input['attention_mask'].append(1)
-            if data_args.use_prefix_lm:
-                _input['prefix_mask'] = [0] * len(_input['attention_mask'])
-                inputs["prefix_mask"].append(_input['prefix_mask'])
             inputs["input_ids"].append(_input['input_ids'])
             inputs['attention_mask'].append(_input['attention_mask'])
 
@@ -581,11 +560,7 @@ def get_preprocessed_data(train_raw_data, valid_raw_data, test_raw_data, pairs, 
         model_inputs = tokenizer(prompts, max_length=data_args.max_source_length, padding=padding, truncation=True,
                                  add_special_tokens=True)
         tokenizer.padding_side = original_padding_side
-        if data_args.use_prefix_lm:
-            model_inputs["prefix_mask"] = []
-            for idx, prompt in enumerate(prompts):
-                prefix_mask = model_inputs["attention_mask"][idx]
-                model_inputs["prefix_mask"].append(prefix_mask)
+
         return model_inputs
 
     # Preprocessing the datasets.
