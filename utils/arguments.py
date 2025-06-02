@@ -2,7 +2,6 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from transformers import MODEL_FOR_CAUSAL_LM_MAPPING
-from transformers.utils.versions import require_version
 
 MODEL_CONFIG_CLASSES = list(MODEL_FOR_CAUSAL_LM_MAPPING.keys())
 MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
@@ -276,11 +275,4 @@ class DataTrainingArguments:
         },
     )
 
-    # predict_source_lang: str = field(default="", metadata={"help": "The source language for testing"})
-    # predict_target_lang: str = field(default="en", metadata={"help": "The target language for testing"})
-
     suffix: Optional[str] = field(default="", metadata={"help": "The suffix of the training file."})
-
-    def __post_init__(self):
-        if self.streaming:
-            require_version("datasets>=2.0.0", "The streaming feature requires `datasets>=2.0.0`")
