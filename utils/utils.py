@@ -358,6 +358,13 @@ def load_model(data_args, model_args, training_args, tokenizer, logger):
         model.generation_config.pad_token_id = 0
         model.generation_config.bos_token_id = 1
         model.generation_config.eos_token_id = 2
+    elif "QWen" in model_args.model_name_or_path:
+        model.config.pad_token_id = 151643
+        model.config.bos_token_id = 151644
+        model.config.eos_token_id = 151645
+        model.generation_config.pad_token_id = 151643
+        model.generation_config.bos_token_id = 151644
+        model.generation_config.eos_token_id = 151645
 
     return model
 
@@ -399,11 +406,11 @@ def load_tokenizer(data_args, model_args, training_args, logger):
         tokenizer.eos_token_id = 2
         tokenizer.eos_token = "</s>"
         tokenizer.bos_token = "<s>"
-    elif "mpt" in model_args.model_name_or_path:
-        tokenizer.pad_token_id = 1
-        tokenizer.bos_token_id = 0
-        tokenizer.eos_token_id = 0
-        tokenizer.pad_token = "<|padding|>"
+    elif "QWen" in model_args.model_name_or_path:
+        tokenizer.pad_token_id = 151643
+        tokenizer.bos_token_id = 151644
+        tokenizer.eos_token_id = 151645
+        tokenizer.pad_token = "<|endoftext|>"
 
     return tokenizer
 
