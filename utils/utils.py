@@ -358,13 +358,6 @@ def load_model(data_args, model_args, training_args, tokenizer, logger):
         model.generation_config.pad_token_id = 0
         model.generation_config.bos_token_id = 1
         model.generation_config.eos_token_id = 2
-    elif "QWen" in model_args.model_name_or_path:
-        model.config.pad_token_id = 151643
-        model.config.bos_token_id = 151644
-        model.config.eos_token_id = 151645
-        model.generation_config.pad_token_id = 151643
-        model.generation_config.bos_token_id = 151644
-        model.generation_config.eos_token_id = 151645
 
     return model
 
@@ -406,11 +399,6 @@ def load_tokenizer(data_args, model_args, training_args, logger):
         tokenizer.eos_token_id = 2
         tokenizer.eos_token = "</s>"
         tokenizer.bos_token = "<s>"
-    elif "QWen" in model_args.model_name_or_path:
-        tokenizer.pad_token_id = 151643
-        tokenizer.bos_token_id = 151644
-        tokenizer.eos_token_id = 151645
-        tokenizer.pad_token = "<|endoftext|>"
 
     return tokenizer
 
@@ -430,18 +418,22 @@ def get_preprocessed_data(train_raw_data, valid_raw_data, test_raw_data, pairs, 
                 prompt = get_prompt(target_lang, source_lang, ex)
                 prompts.append(prompt)
                 inputs.append(prompt + ex[source_lang])
+        # XXX QWen的add_special_tokens参数无法控制添加特殊token，都不添加
         model_inputs = tokenizer(inputs, max_length=data_args.max_source_length + data_args.max_new_tokens - 1,
                                  padding=padding, truncation=True, add_special_tokens=True)
+        # XXX QWen的eos和pad是一样
         check_add_eos(model_inputs, tokenizer)
         labels = copy.deepcopy(model_inputs)
         # If we are padding here, replace all tokenizer.pad_token_id in the labels by -100 when we want to ignore
         # padding in the loss.
         if padding == "max_length" and data_args.ignore_pad_token_for_loss:
+            # XXX QWen将不学习eos
             labels["input_ids"] = [
                 [(l if l != tokenizer.pad_token_id else -100) for l in label] for label in labels["input_ids"]
             ]
             if data_args.ignore_prompt_token_for_loss:
                 for idx, prompt in enumerate(prompts):
+                    # XXX QWen的add_special_tokens参数无法控制添加特殊token，都不添加
                     prompt = tokenizer(prompt, max_length=data_args.max_source_length,
                                        add_special_tokens=False).input_ids
                     first_non_pad_idx = get_first_non_pad_index(labels["input_ids"][idx])
@@ -546,6 +538,7 @@ def get_preprocessed_data(train_raw_data, valid_raw_data, test_raw_data, pairs, 
         original_padding_side = tokenizer.padding_side
         if original_padding_side != "left":
             tokenizer.padding_side = "left"
+        # XXX QWen的add_special_tokens参数无法控制添加特殊token，都不添加
         model_inputs = tokenizer(prompts, max_length=data_args.max_source_length, padding=padding, truncation=True,
                                  add_special_tokens=True)
         tokenizer.padding_side = original_padding_side
