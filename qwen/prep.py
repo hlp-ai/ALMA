@@ -11,11 +11,19 @@ model = AutoModelForCausalLM.from_pretrained(model_name)
 print(model.config)
 print(model.generation_config)
 
+model.config.pad_token_id = 151645
+model.generation_config.pad_token_id = 151645
+
+print(model.config)
+print(model.generation_config)
+
 tokenizer = AutoTokenizer.from_pretrained(model_name,
                                           padding_side="left",
                                           add_eos_token=False)
 print(tokenizer.padding_side, tokenizer.pad_token_id, tokenizer.bos_token_id, tokenizer.eos_token_id)
 print(hasattr(tokenizer, "pad_token_id"))
+
+tokenizer.pad_token_id = 151645
 
 text = ["this is a test.", "this is another test. is it ok?"]
 max_len = 16
