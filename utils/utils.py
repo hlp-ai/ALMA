@@ -142,37 +142,37 @@ def load_mmt_dataset(pairs, data_args, model_args, training_args, logger):
     return train_raw_data, valid_raw_data, test_raw_data
 
 
-def get_first_non_pad_index(input_tensor):
-    input_tensor = torch.tensor(input_tensor)
-    assert input_tensor.ndim == 1
-    first_non_pad_index = (input_tensor != -100).nonzero(as_tuple=True)[0][0]
-    return first_non_pad_index.item()
+# def get_first_non_pad_index(input_tensor):
+#     input_tensor = torch.tensor(input_tensor)
+#     assert input_tensor.ndim == 1
+#     first_non_pad_index = (input_tensor != -100).nonzero(as_tuple=True)[0][0]
+#     return first_non_pad_index.item()
 
 
-def get_first_special_index(input_tensor, special):
-    input_tensor = torch.tensor(input_tensor)
-    assert input_tensor.ndim == 1
-    first_pad_index = (input_tensor == special).nonzero(as_tuple=True)[0]
-    if len(first_pad_index) > 0:
-        return first_pad_index[0].item()
-    else:
-        return -1
+# def get_first_special_index(input_tensor, special):
+#     input_tensor = torch.tensor(input_tensor)
+#     assert input_tensor.ndim == 1
+#     first_pad_index = (input_tensor == special).nonzero(as_tuple=True)[0]
+#     if len(first_pad_index) > 0:
+#         return first_pad_index[0].item()
+#     else:
+#         return -1
 
 
-def get_first_special_index_batch(input_tensor, special):
-    input_tensor = torch.tensor(input_tensor)
-    assert input_tensor.ndim == 2
-    matches = input_tensor.eq(special).long()
-    indices = matches.argmax(dim=1)
-    indices[matches.sum(dim=1) == 0] = -1
-    return indices
+# def get_first_special_index_batch(input_tensor, special):
+#     input_tensor = torch.tensor(input_tensor)
+#     assert input_tensor.ndim == 2
+#     matches = input_tensor.eq(special).long()
+#     indices = matches.argmax(dim=1)
+#     indices[matches.sum(dim=1) == 0] = -1
+#     return indices
 
 
-def get_first_non_specical_index(input_tensor, special):
-    input_tensor = torch.tensor(input_tensor)
-    assert input_tensor.ndim == 1
-    first_non_pad_index = (input_tensor != special).nonzero(as_tuple=True)[0][0]
-    return first_non_pad_index.item()
+# def get_first_non_specical_index(input_tensor, special):
+#     input_tensor = torch.tensor(input_tensor)
+#     assert input_tensor.ndim == 1
+#     first_non_pad_index = (input_tensor != special).nonzero(as_tuple=True)[0][0]
+#     return first_non_pad_index.item()
 
 
 # Suffix for splitting and getting the generated sentences
@@ -213,18 +213,18 @@ def get_prompt(source_lang, target_lang, ex, shots_eval_dict={}, use_target_lang
     return prompt
 
 
-def check_add_eos(tokenized_inputs, tokenizer):
-    if tokenized_inputs.input_ids[0][-1] != tokenizer.eos_token_id:
-        for idx in range(len(tokenized_inputs.input_ids)):
-            tokenized_inputs.input_ids[idx].append(tokenizer.eos_token_id)
-            tokenized_inputs.attention_mask[idx].append(1)
+# def check_add_eos(tokenized_inputs, tokenizer):
+#     if tokenized_inputs.input_ids[0][-1] != tokenizer.eos_token_id:
+#         for idx in range(len(tokenized_inputs.input_ids)):
+#             tokenized_inputs.input_ids[idx].append(tokenizer.eos_token_id)
+#             tokenized_inputs.attention_mask[idx].append(1)
 
 
-def check_add_eos_right_pad(tokenized_inputs, tokenizer):
-    for idx in range(len(tokenized_inputs.input_ids)):
-        first_non_pad_idx = get_first_special_index(tokenized_inputs.input_ids[idx], tokenizer.pad_token_id)
-        tokenized_inputs.input_ids[idx][first_non_pad_idx] = tokenizer.eos_token_id
-        tokenized_inputs.attention_mask[idx][first_non_pad_idx] = 1
+# def check_add_eos_right_pad(tokenized_inputs, tokenizer):
+#     for idx in range(len(tokenized_inputs.input_ids)):
+#         first_non_pad_idx = get_first_special_index(tokenized_inputs.input_ids[idx], tokenizer.pad_token_id)
+#         tokenized_inputs.input_ids[idx][first_non_pad_idx] = tokenizer.eos_token_id
+#         tokenized_inputs.attention_mask[idx][first_non_pad_idx] = 1
 
 
 def print_trainable_parameters(model):
@@ -449,6 +449,27 @@ def get_preprocessed_data(train_raw_data, valid_raw_data, test_raw_data, pairs, 
         model_inputs["labels"] = labels["input_ids"]
         return model_inputs
 
+    def tokenize_function_train_eval(examples):
+        inputs = []
+        prompts = []
+        for ex in examples["translation"]:
+            source_lang, target_lang = list(ex.keys())
+            if f"{source_lang}-{target_lang}" in pairs:
+                prompt = get_prompt(source_lang, target_lang, ex)
+                prompts.append(prompt)
+                inputs.append(prompt + ex[target_lang])
+            if f"{target_lang}-{source_lang}" in pairs:
+                prompt = get_prompt(target_lang, source_lang, ex)
+                prompts.append(prompt)
+                inputs.append(prompt + ex[source_lang])
+
+        model_inputs = tokenizer(inputs, max_length=data_args.max_source_length + data_args.max_new_tokens,
+                                 padding=padding, truncation=True)
+
+        labels = copy.deepcopy(model_inputs)
+        model_inputs["labels"] = labels["input_ids"]
+        return model_inputs
+
     def tokenize_function_train_eval_right_pad(examples):
         inputs = []
         prompts = []
@@ -568,7 +589,8 @@ def get_preprocessed_data(train_raw_data, valid_raw_data, test_raw_data, pairs, 
     padding = "max_length"
 
     train_datasets, eval_datasets, test_datasets = None, None, None
-    mmt_train_eval_tok_func = tokenize_function_train_eval_right_pad if data_args.right_pad else tokenize_function_train_eval_left_pad
+    mmt_train_eval_tok_func = tokenize_function_train_eval
+    # tokenize_function_train_eval_right_pad if data_args.right_pad else tokenize_function_train_eval_left_pad
 
     if training_args.do_train:
         processed_datasets = []
