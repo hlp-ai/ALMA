@@ -59,7 +59,8 @@ LANG_TABLE = {
     "ro": "Romanian",
 }
 
-## Prefix and suffix for prompt in target language (only from English to target language if the target is non-English)
+## Prefix and suffix for prompt in target language
+# (only from English to target language if the target is non-English)
 PREFIX = {
     "de": "Übersetzen Sie dies vom Englischen ins Deutsche:\nEnglisch: ",
     "fr": "Traduisez ceci de l'anglais vers le français :\nAnglais: ",
@@ -326,12 +327,6 @@ def load_model(data_args, model_args, training_args, tokenizer, logger):
         n_params = sum({p.data_ptr(): p.numel() for p in model.parameters()}.values())
         logger.info(f"Training new model from scratch - Total size={n_params / 2 ** 20:.2f}M params")
 
-    # We resize the embeddings only when necessary to avoid index errors. If you are creating a model from scratch
-    # on a small vocab and want a smaller embedding size, remove this test.
-    embedding_size = model.get_input_embeddings().weight.shape[0]
-    if len(tokenizer) > embedding_size:
-        model.resize_token_embeddings(len(tokenizer))
-
     if model_args.use_peft:
         if model_args.peft_model_id:
             model = PeftModel.from_pretrained(model, model_args.peft_model_id)
@@ -351,16 +346,16 @@ def load_model(data_args, model_args, training_args, tokenizer, logger):
             model = get_peft_model(model, config)
         print_trainable_parameters(model)
 
-    if "llama" in model_args.model_name_or_path:
-        model.config.pad_token_id = 0
-        model.config.bos_token_id = 1
-        model.config.eos_token_id = 2
-        model.generation_config.pad_token_id = 0
-        model.generation_config.bos_token_id = 1
-        model.generation_config.eos_token_id = 2
-    elif "QWen" in model_args.model_name_or_path:
-        model.config.pad_token_id = 151645
-        model.generation_config.pad_token_id = 151645
+    # if "llama" in model_args.model_name_or_path:
+    #     model.config.pad_token_id = 0
+    #     model.config.bos_token_id = 1
+    #     model.config.eos_token_id = 2
+    #     model.generation_config.pad_token_id = 0
+    #     model.generation_config.bos_token_id = 1
+    #     model.generation_config.eos_token_id = 2
+    # elif "QWen" in model_args.model_name_or_path:
+    #     model.config.pad_token_id = 151645
+    #     model.generation_config.pad_token_id = 151645
 
     return model
 
@@ -376,34 +371,40 @@ def load_tokenizer(data_args, model_args, training_args, logger):
     if model_args.tokenizer_name:
         tokenizer = AutoTokenizer.from_pretrained(model_args.tokenizer_name, **tokenizer_kwargs)
     elif model_args.model_name_or_path:
-        if "llama" in model_args.model_name_or_path:
-            tokenizer = LlamaTokenizer.from_pretrained(
-                model_args.model_name_or_path,
-                **tokenizer_kwargs,
-                padding_side='left' if not data_args.right_pad else "right",
-                add_eos_token=False
-            )
-        else:
-            tokenizer = AutoTokenizer.from_pretrained(
-                model_args.model_name_or_path,
-                **tokenizer_kwargs,
-                padding_side='left' if not data_args.right_pad else "right",
-                add_eos_token=False
-            )
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_args.model_name_or_path,
+            **tokenizer_kwargs,
+            # padding_side='left' if not data_args.right_pad else "right",
+            # add_eos_token=False
+        )
+        # if "llama" in model_args.model_name_or_path:
+        #     tokenizer = LlamaTokenizer.from_pretrained(
+        #         model_args.model_name_or_path,
+        #         **tokenizer_kwargs,
+        #         padding_side='left' if not data_args.right_pad else "right",
+        #         add_eos_token=False
+        #     )
+        # else:
+        #     tokenizer = AutoTokenizer.from_pretrained(
+        #         model_args.model_name_or_path,
+        #         **tokenizer_kwargs,
+        #         padding_side='left' if not data_args.right_pad else "right",
+        #         add_eos_token=False
+        #     )
     else:
         raise ValueError(
             "You are instantiating a new tokenizer from scratch. This is not supported by this script."
             "You can do it from another script, save it, and load it from here, using --tokenizer_name."
         )
 
-    if "llama" in model_args.model_name_or_path:
-        tokenizer.pad_token_id = 0
-        tokenizer.bos_token_id = 1
-        tokenizer.eos_token_id = 2
-        tokenizer.eos_token = "</s>"
-        tokenizer.bos_token = "<s>"
-    elif "QWen" in model_args.model_name_or_path:
-        tokenizer.pad_token_id = 151645
+    # if "llama" in model_args.model_name_or_path:
+    #     tokenizer.pad_token_id = 0
+    #     tokenizer.bos_token_id = 1
+    #     tokenizer.eos_token_id = 2
+    #     tokenizer.eos_token = "</s>"
+    #     tokenizer.bos_token = "<s>"
+    # elif "QWen" in model_args.model_name_or_path:
+    #     tokenizer.pad_token_id = 151645
 
     return tokenizer
 
@@ -423,26 +424,28 @@ def get_preprocessed_data(train_raw_data, valid_raw_data, test_raw_data, pairs, 
                 prompt = get_prompt(target_lang, source_lang, ex)
                 prompts.append(prompt)
                 inputs.append(prompt + ex[source_lang])
-        # XXX QWen的add_special_tokens参数无法控制添加特殊token，都不添加
-        model_inputs = tokenizer(inputs, max_length=data_args.max_source_length + data_args.max_new_tokens - 1,
-                                 padding=padding, truncation=True, add_special_tokens=True)
-        # XXX QWen的eos和pad是一样
-        check_add_eos(model_inputs, tokenizer)
+        # # XXX QWen的add_special_tokens参数无法控制添加特殊token，都不添加
+        # model_inputs = tokenizer(inputs, max_length=data_args.max_source_length + data_args.max_new_tokens - 1,
+        #                          padding=padding, truncation=True, add_special_tokens=True)
+        model_inputs = tokenizer(inputs, max_length=data_args.max_source_length + data_args.max_new_tokens,
+                                 padding=padding, truncation=True)
+        # # XXX QWen的eos和pad是一样
+        # check_add_eos(model_inputs, tokenizer)
         labels = copy.deepcopy(model_inputs)
         # If we are padding here, replace all tokenizer.pad_token_id in the labels by -100 when we want to ignore
         # padding in the loss.
-        if padding == "max_length" and data_args.ignore_pad_token_for_loss:
-            # XXX QWen将不学习eos
-            labels["input_ids"] = [
-                [(l if l != tokenizer.pad_token_id else -100) for l in label] for label in labels["input_ids"]
-            ]
-            if data_args.ignore_prompt_token_for_loss:
-                for idx, prompt in enumerate(prompts):
-                    # XXX QWen的add_special_tokens参数无法控制添加特殊token，都不添加
-                    prompt = tokenizer(prompt, max_length=data_args.max_source_length,
-                                       add_special_tokens=False).input_ids
-                    first_non_pad_idx = get_first_non_pad_index(labels["input_ids"][idx])
-                    labels["input_ids"][idx][first_non_pad_idx: first_non_pad_idx + len(prompt)] = [-100] * len(prompt)
+        # if padding == "max_length" and data_args.ignore_pad_token_for_loss:
+        #     # XXX QWen将不学习eos
+        #     labels["input_ids"] = [
+        #         [(l if l != tokenizer.pad_token_id else -100) for l in label] for label in labels["input_ids"]
+        #     ]
+        #     if data_args.ignore_prompt_token_for_loss:
+        #         for idx, prompt in enumerate(prompts):
+        #             # XXX QWen的add_special_tokens参数无法控制添加特殊token，都不添加
+        #             prompt = tokenizer(prompt, max_length=data_args.max_source_length,
+        #                                add_special_tokens=False).input_ids
+        #             first_non_pad_idx = get_first_non_pad_index(labels["input_ids"][idx])
+        #             labels["input_ids"][idx][first_non_pad_idx: first_non_pad_idx + len(prompt)] = [-100] * len(prompt)
         model_inputs["labels"] = labels["input_ids"]
         return model_inputs
 
@@ -459,21 +462,23 @@ def get_preprocessed_data(train_raw_data, valid_raw_data, test_raw_data, pairs, 
                 prompt = get_prompt(target_lang, source_lang, ex)
                 prompts.append(prompt)
                 inputs.append(prompt + ex[source_lang])
+        # model_inputs = tokenizer(inputs, max_length=data_args.max_source_length + data_args.max_new_tokens,
+        #                          padding=padding, truncation=True, add_special_tokens=True)
         model_inputs = tokenizer(inputs, max_length=data_args.max_source_length + data_args.max_new_tokens,
-                                 padding=padding, truncation=True, add_special_tokens=True)
-        check_add_eos_right_pad(model_inputs, tokenizer)
+                                 padding=padding, truncation=True)
+        # check_add_eos_right_pad(model_inputs, tokenizer)
         labels = copy.deepcopy(model_inputs)
-        # If we are padding here, replace all tokenizer.pad_token_id in the labels by -100 when we want to ignore
-        # padding in the loss.
-        if padding == "max_length" and data_args.ignore_pad_token_for_loss:
-            labels["input_ids"] = [
-                [(l if l != tokenizer.pad_token_id else -100) for l in label] for label in labels["input_ids"]
-            ]
-            if data_args.ignore_prompt_token_for_loss:
-                for idx, prompt in enumerate(prompts):
-                    prompt = tokenizer(prompt, max_length=data_args.max_source_length,
-                                       add_special_tokens=False).input_ids
-                    labels["input_ids"][idx][: len(prompt)] = [-100] * len(prompt)
+        # # If we are padding here, replace all tokenizer.pad_token_id in the labels by -100 when we want to ignore
+        # # padding in the loss.
+        # if padding == "max_length" and data_args.ignore_pad_token_for_loss:
+        #     labels["input_ids"] = [
+        #         [(l if l != tokenizer.pad_token_id else -100) for l in label] for label in labels["input_ids"]
+        #     ]
+        #     if data_args.ignore_prompt_token_for_loss:
+        #         for idx, prompt in enumerate(prompts):
+        #             prompt = tokenizer(prompt, max_length=data_args.max_source_length,
+        #                                add_special_tokens=False).input_ids
+        #             labels["input_ids"][idx][: len(prompt)] = [-100] * len(prompt)
 
         model_inputs["labels"] = labels["input_ids"]
         return model_inputs
@@ -540,13 +545,14 @@ def get_preprocessed_data(train_raw_data, valid_raw_data, test_raw_data, pairs, 
                                     data_args.use_target_lang_prompt_eval)
                 prompts.append(prompt)
                 targets.append(prompt + ex[target_lang])
-        original_padding_side = tokenizer.padding_side
-        if original_padding_side != "left":
-            tokenizer.padding_side = "left"
+        # original_padding_side = tokenizer.padding_side
+        # if original_padding_side != "left":
+        #     tokenizer.padding_side = "left"
         # XXX QWen的add_special_tokens参数无法控制添加特殊token，都不添加
-        model_inputs = tokenizer(prompts, max_length=data_args.max_source_length, padding=padding, truncation=True,
-                                 add_special_tokens=True)
-        tokenizer.padding_side = original_padding_side
+        # model_inputs = tokenizer(prompts, max_length=data_args.max_source_length, padding=padding, truncation=True,
+        #                          add_special_tokens=True)
+        model_inputs = tokenizer(prompts, max_length=data_args.max_source_length, padding=padding, truncation=True)
+        # tokenizer.padding_side = original_padding_side
 
         return model_inputs
 
