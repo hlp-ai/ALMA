@@ -20,7 +20,7 @@ from transformers import (
 )
 
 from utils.arguments import ModelArguments, DataTrainingArguments
-# from utils.trainer_llmmt import LlmmtTrainer
+from utils.trainer_llmmt import LlmmtTrainer
 from utils.utils import load_mmt_dataset, get_preprocessed_data, clean_outputstring, load_tokenizer, load_model, \
     SavePeftModelCallback, get_key_suffix
 
@@ -117,17 +117,7 @@ def main():
     collate_fn = default_data_collator
 
     # Initialize our Trainer
-    # trainer = LlmmtTrainer(
-    #     model=model,
-    #     args=training_args,
-    #     train_dataset=train_datasets if training_args.do_train else None,
-    #     eval_dataset=eval_datasets if training_args.do_eval else None,
-    #     tokenizer=tokenizer,
-    #     data_collator=collate_fn,
-    #     callbacks=[SavePeftModelCallback] if model_args.use_peft else None,
-    # )
-
-    trainer = transformers.Trainer(
+    trainer = LlmmtTrainer(
         model=model,
         args=training_args,
         train_dataset=train_datasets if training_args.do_train else None,
@@ -169,7 +159,7 @@ def main():
 
             # Replace -100s used for padding as we can't decode them
             if int(torch.cuda.current_device()) == 0:
-                preds = np.where(preds != -100, preds, tokenizer.pad_token_id)
+                # preds = np.where(preds != -100, preds, tokenizer.pad_token_id)
                 decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
 
                 # Some simple post-processing
